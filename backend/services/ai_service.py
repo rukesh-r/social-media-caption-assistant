@@ -1,30 +1,108 @@
 import os
 import json
-import time
 
 from dotenv import load_dotenv
 from google import genai
 
+
+# ============================================================
+# LOAD ENVIRONMENT VARIABLES
+# ============================================================
+
 load_dotenv()
+
 
 api_key = os.getenv("GEMINI_API_KEY")
 
-client = genai.Client(api_key=api_key)
+
+if not api_key:
+
+    raise ValueError(
+        "GEMINI_API_KEY is not configured in .env"
+    )
 
 
-def generate_caption(topic, platform, tone, audience, keywords, length):
+client = genai.Client(
+    api_key=api_key
+)
+
+
+# ============================================================
+# JSON RESPONSE PARSER
+# ============================================================
+
+def parse_json_response(text):
+
+    result = text.strip()
+
+
+    # Remove markdown code fences
+
+    if result.startswith("```json"):
+
+        result = result[7:]
+
+
+    elif result.startswith("```"):
+
+        result = result[3:]
+
+
+    if result.endswith("```"):
+
+        result = result[:-3]
+
+
+    result = result.strip()
+
+
+    try:
+
+        return json.loads(result)
+
+
+    except json.JSONDecodeError as e:
+
+        raise Exception(
+            f"Gemini returned invalid JSON: {str(e)}"
+        )
+
+
+# ============================================================
+# TEXT CAPTION GENERATION
+# ============================================================
+
+def generate_caption(
+    topic,
+    platform,
+    tone,
+    audience,
+    keywords,
+    length
+):
 
     prompt = f"""
 You are an expert social media content creator.
 
-Generate personalized social media content using these details:
+Generate personalized social media content.
 
-Topic: {topic}
-Platform: {platform}
-Tone: {tone}
-Target Audience: {audience}
-Keywords: {keywords}
-Caption Length: {length}
+Topic:
+{topic}
+
+Platform:
+{platform}
+
+Tone:
+{tone}
+
+Target Audience:
+{audience}
+
+Keywords:
+{keywords}
+
+Caption Length:
+{length}
 
 Return ONLY valid JSON.
 
@@ -62,67 +140,208 @@ Requirements:
 - Make the caption natural and engaging.
 - Follow the selected platform style.
 - Follow the selected tone.
-- Make the content appropriate for the target audience.
-- Use the provided keywords naturally.
-- Do not add markdown.
-- Do not add explanations outside the JSON.
+- Make it appropriate for the target audience.
+- Use the keywords naturally.
+- Do not use markdown.
+- Do not add explanations outside JSON.
 """
 
-    # Retry temporary Gemini failures
-    max_attempts = 3
 
-    for attempt in range(max_attempts):
+    response = client.models.generate_content(
 
-        try:
+        model="gemini-3.5-flash-lite",
 
-            response = client.models.generate_content(
-                model="gemini-3.5-flash-lite",
-                contents=prompt,
-                config={
-                    "response_mime_type": "application/json"
+        contents=prompt
+
+    )
+
+
+    return parse_json_response(
+        response.text
+    )
+
+
+# ============================================================
+# IMAGE CAPTION GENERATION
+# ============================================================
+
+def generate_image_caption(
+    image,
+    platform,
+    tone,
+    audience,
+    length
+):
+
+    image_bytes = image.read()
+
+
+    prompt = f"""
+You are an expert social media content creator
+and image understanding AI.
+
+Analyze the uploaded image carefully.
+
+Understand:
+
+- Main subject
+- People or objects
+- Environment
+- Activity
+- Mood
+- Visible context
+- Important visual details
+
+Then create social media content based on the image.
+
+Platform:
+{platform}
+
+Tone:
+{tone}
+
+Target Audience:
+{audience}
+
+Caption Length:
+{length}
+
+Return ONLY valid JSON.
+
+Use exactly this structure:
+
+{{
+    "caption": "main caption",
+    "alternatives": [
+        "alternative caption 1",
+        "alternative caption 2",
+        "alternative caption 3"
+    ],
+    "hashtags": [
+        "#hashtag1",
+        "#hashtag2",
+        "#hashtag3",
+        "#hashtag4",
+        "#hashtag5",
+        "#hashtag6",
+        "#hashtag7",
+        "#hashtag8",
+        "#hashtag9",
+        "#hashtag10"
+    ],
+    "emojis": [
+        "emoji1",
+        "emoji2",
+        "emoji3"
+    ],
+    "call_to_action": "short call to action"
+}}
+
+Important:
+
+- Base captions on what is visible.
+- Do not invent names or locations.
+- Do not invent facts.
+- Make captions natural.
+- Follow the selected platform.
+- Follow the selected tone.
+- Do not add explanations outside JSON.
+"""
+
+
+    response = client.models.generate_content(
+
+        model="gemini-3.5-flash-lite",
+
+        contents=[
+
+            {
+                "text": prompt
+            },
+
+            {
+                "inline_data": {
+                    "mime_type": image.content_type,
+                    "data": image_bytes
                 }
-)
+            }
 
-            result = response.text.strip()
+        ]
 
-            # Remove markdown code fences if present
-            if result.startswith("```json"):
-                result = result[7:]
+    )
 
-            elif result.startswith("```"):
-                result = result[3:]
 
-            if result.endswith("```"):
-                result = result[:-3]
+    return parse_json_response(
+        response.text
+    )
 
-            result = result.strip()
 
-            return json.loads(result)
+# ============================================================
+# CAPTION REWRITER
+# ============================================================
 
-        except Exception as e:
+def rewrite_caption(
+    original_caption,
+    rewrite_style,
+    platform
+):
 
-            error_message = str(e)
+    prompt = f"""
+You are an expert social media content editor.
 
-            # Retry only temporary availability errors
-            if "503" in error_message or "UNAVAILABLE" in error_message:
+Rewrite the user's existing social media caption.
 
-                if attempt < max_attempts - 1:
+Original Caption:
+{original_caption}
 
-                    wait_time = 2 ** attempt
+Rewrite Style:
+{rewrite_style}
 
-                    print(
-                        f"Gemini temporarily unavailable. "
-                        f"Retrying in {wait_time} seconds..."
-                    )
+Platform:
+{platform}
 
-                    time.sleep(wait_time)
+Return ONLY valid JSON.
 
-                else:
+Use exactly this structure:
 
-                    raise Exception(
-                        "Gemini is temporarily unavailable. "
-                        "Please try again after a few seconds."
-                    )
+{{
+    "rewritten_caption": "improved caption",
+    "alternative_versions": [
+        "alternative version 1",
+        "alternative version 2",
+        "alternative version 3"
+    ],
+    "hashtags": [
+        "#hashtag1",
+        "#hashtag2",
+        "#hashtag3",
+        "#hashtag4",
+        "#hashtag5"
+    ]
+}}
 
-            else:
-                raise e
+Rules:
+
+- Preserve the original meaning.
+- Do not invent facts.
+- Improve grammar and readability.
+- Follow the requested rewrite style.
+- Adapt the caption to the selected platform.
+- Make it natural.
+- Make it engaging.
+- Return only JSON.
+"""
+
+
+    response = client.models.generate_content(
+
+        model="gemini-3.5-flash-lite",
+
+        contents=prompt
+
+    )
+
+
+    return parse_json_response(
+        response.text
+    )
