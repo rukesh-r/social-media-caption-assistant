@@ -169,25 +169,13 @@ function RootApp() {
 
     return (
 
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/40 to-slate-50 flex items-center justify-center">
         <div className="text-center">
-
-          <div className="text-6xl animate-pulse mb-5">
-
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-violet-600 text-white text-3xl mb-5 shadow-lg shadow-purple-200 animate-pulse">
             ✨
-
           </div>
-
-
-          <p className="text-gray-500">
-
-            Loading CaptionCraft AI...
-
-          </p>
-
+          <p className="text-gray-500 text-sm font-medium">Loading CaptionCraft AI...</p>
         </div>
-
       </div>
 
     );
