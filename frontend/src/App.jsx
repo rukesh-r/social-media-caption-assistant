@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
-
-
+import History from "./History.jsx";
+import RagGenerator from "./RagGenerator";
 function App() {
 
   // ============================================================
@@ -9,19 +9,12 @@ function App() {
   // ============================================================
 
   const [formData, setFormData] = useState({
-
     topic: "",
-
     platform: "Instagram",
-
     tone: "Casual",
-
     audience: "General",
-
     keywords: "",
-
     length: "Medium"
-
   });
 
 
@@ -63,6 +56,23 @@ function App() {
 
 
   // ============================================================
+  // CAPTION ANALYZER
+  // ============================================================
+
+  const [analyzeCaptionText, setAnalyzeCaptionText] =
+    useState("");
+
+  const [analyzePlatform, setAnalyzePlatform] =
+    useState("Instagram");
+
+  const [analysisResult, setAnalysisResult] =
+    useState(null);
+
+  const [analysisLoading, setAnalysisLoading] =
+    useState(false);
+
+
+  // ============================================================
   // ERROR
   // ============================================================
 
@@ -98,22 +108,15 @@ function App() {
 
 
     if (!selectedImage) {
-
       return;
-
     }
 
 
     const allowedTypes = [
-
       "image/jpeg",
-
       "image/png",
-
       "image/jpg",
-
       "image/webp"
-
     ];
 
 
@@ -206,7 +209,9 @@ function App() {
       let response;
 
 
+      // ========================================================
       // IMAGE
+      // ========================================================
 
       if (image) {
 
@@ -256,7 +261,9 @@ function App() {
       }
 
 
+      // ========================================================
       // TEXT
+      // ========================================================
 
       else {
 
@@ -282,6 +289,7 @@ function App() {
 
       }
 
+
       else {
 
         setError(
@@ -291,6 +299,7 @@ function App() {
       }
 
     }
+
 
     catch (err) {
 
@@ -306,6 +315,7 @@ function App() {
       );
 
     }
+
 
     finally {
 
@@ -375,6 +385,7 @@ function App() {
 
       }
 
+
       else {
 
         setError(
@@ -384,6 +395,7 @@ function App() {
       }
 
     }
+
 
     catch (err) {
 
@@ -400,9 +412,103 @@ function App() {
 
     }
 
+
     finally {
 
       setRewriteLoading(false);
+
+    }
+
+  };
+
+
+  // ============================================================
+  // ANALYZE CAPTION
+  // ============================================================
+
+  const handleAnalyzeCaption = async () => {
+
+    if (
+      !analyzeCaptionText.trim()
+    ) {
+
+      setError(
+        "Enter a caption to analyze."
+      );
+
+      return;
+
+    }
+
+
+    setAnalysisLoading(true);
+
+    setError("");
+
+    setAnalysisResult(null);
+
+
+    try {
+
+      const response =
+        await axios.post(
+
+          "http://127.0.0.1:5000/analyze-caption",
+
+          {
+
+            caption:
+              analyzeCaptionText,
+
+            platform:
+              analyzePlatform
+
+          }
+
+        );
+
+
+      if (
+        response.data.success
+      ) {
+
+        setAnalysisResult(
+          response.data.result
+        );
+
+      }
+
+
+      else {
+
+        setError(
+          response.data.error
+        );
+
+      }
+
+    }
+
+
+    catch (err) {
+
+      console.error(err);
+
+
+      setError(
+
+        err.response?.data?.error ||
+
+        "Unable to analyze caption."
+
+      );
+
+    }
+
+
+    finally {
+
+      setAnalysisLoading(false);
 
     }
 
@@ -427,6 +533,7 @@ function App() {
       alert(message);
 
     }
+
 
     catch (error) {
 
@@ -459,6 +566,25 @@ function App() {
       );
 
     }
+
+  };
+
+
+  // ============================================================
+  // SCORE COLOR
+  // ============================================================
+
+  const getScoreColor = (score) => {
+
+    if (score >= 80) {
+      return "text-green-600";
+    }
+
+    if (score >= 60) {
+      return "text-yellow-600";
+    }
+
+    return "text-red-600";
 
   };
 
@@ -534,7 +660,7 @@ function App() {
 
           <p className="mt-3 text-gray-500 max-w-2xl mx-auto">
 
-            Generate, improve and personalize your
+            Generate, improve, analyze and personalize your
             social media content with Generative AI.
 
           </p>
@@ -559,7 +685,6 @@ function App() {
           ==================================================== */}
 
           <div className="bg-white rounded-2xl border shadow-sm p-7">
-
 
             <h3 className="text-xl font-semibold mb-6">
 
@@ -905,7 +1030,6 @@ function App() {
           ==================================================== */}
 
           <div className="bg-white rounded-2xl border shadow-sm p-7">
-
 
             <h3 className="text-xl font-semibold mb-6">
 
@@ -1380,16 +1504,17 @@ function App() {
                 </h4>
 
 
-                {!rewriteResult && !rewriteLoading && (
+                {!rewriteResult &&
+                  !rewriteLoading && (
 
-                  <div className="h-72 bg-slate-50 border rounded-xl flex items-center justify-center text-gray-400 text-center p-6">
+                    <div className="h-72 bg-slate-50 border rounded-xl flex items-center justify-center text-gray-400 text-center p-6">
 
-                    Your rewritten caption
-                    will appear here.
+                      Your rewritten caption
+                      will appear here.
 
-                  </div>
+                    </div>
 
-                )}
+                  )}
 
 
                 {rewriteLoading && (
@@ -1418,133 +1543,134 @@ function App() {
                 )}
 
 
-                {rewriteResult && !rewriteLoading && (
+                {rewriteResult &&
+                  !rewriteLoading && (
 
-                  <div className="space-y-5">
-
-
-                    {/* REWRITTEN */}
-
-                    <div>
-
-                      <div className="flex justify-between mb-2">
-
-                        <span className="font-semibold">
-
-                          ✨ Rewritten Caption
-
-                        </span>
+                    <div className="space-y-5">
 
 
-                        <button
+                      {/* REWRITTEN */}
 
-                          onClick={() =>
-                            copyText(
-                              rewriteResult.rewritten_caption,
-                              "Caption copied!"
-                            )
+                      <div>
+
+                        <div className="flex justify-between mb-2">
+
+                          <span className="font-semibold">
+
+                            ✨ Rewritten Caption
+
+                          </span>
+
+
+                          <button
+
+                            onClick={() =>
+                              copyText(
+                                rewriteResult.rewritten_caption,
+                                "Caption copied!"
+                              )
+                            }
+
+                            className="text-purple-600 text-sm"
+
+                          >
+
+                            📋 Copy
+
+                          </button>
+
+                        </div>
+
+
+                        <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
+
+                          {
+                            rewriteResult.rewritten_caption
                           }
 
-                          className="text-purple-600 text-sm"
-
-                        >
-
-                          📋 Copy
-
-                        </button>
+                        </div>
 
                       </div>
 
 
-                      <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
+                      {/* ALTERNATIVES */}
 
-                        {
-                          rewriteResult.rewritten_caption
-                        }
+                      <div>
 
-                      </div>
+                        <h4 className="font-semibold mb-3">
 
-                    </div>
+                          Alternative Versions
 
-
-                    {/* ALTERNATIVES */}
-
-                    <div>
-
-                      <h4 className="font-semibold mb-3">
-
-                        Alternative Versions
-
-                      </h4>
+                        </h4>
 
 
-                      <div className="space-y-2">
+                        <div className="space-y-2">
 
-                        {rewriteResult.alternative_versions?.map(
+                          {rewriteResult.alternative_versions?.map(
 
-                          (version, index) => (
+                            (version, index) => (
 
-                            <div
+                              <div
 
-                              key={index}
+                                key={index}
 
-                              className="border rounded-xl p-3"
+                                className="border rounded-xl p-3"
 
-                            >
+                              >
 
-                              {version}
+                                {version}
 
-                            </div>
+                              </div>
 
-                          )
+                            )
 
-                        )}
+                          )}
+
+                        </div>
 
                       </div>
 
-                    </div>
+
+                      {/* HASHTAGS */}
+
+                      <div>
+
+                        <h4 className="font-semibold mb-2">
+
+                          Suggested Hashtags
+
+                        </h4>
 
 
-                    {/* HASHTAGS */}
+                        <div className="flex flex-wrap gap-2">
 
-                    <div>
+                          {rewriteResult.hashtags?.map(
 
-                      <h4 className="font-semibold mb-2">
+                            (tag, index) => (
 
-                        Suggested Hashtags
+                              <span
 
-                      </h4>
+                                key={index}
 
+                                className="bg-gray-100 px-3 py-1 rounded-full text-sm"
 
-                      <div className="flex flex-wrap gap-2">
+                              >
 
-                        {rewriteResult.hashtags?.map(
+                                {tag}
 
-                          (tag, index) => (
+                              </span>
 
-                            <span
+                            )
 
-                              key={index}
+                          )}
 
-                              className="bg-gray-100 px-3 py-1 rounded-full text-sm"
-
-                            >
-
-                              {tag}
-
-                            </span>
-
-                          )
-
-                        )}
+                        </div>
 
                       </div>
 
                     </div>
 
-                  </div>
-
-                )}
+                  )}
 
               </div>
 
@@ -1554,6 +1680,449 @@ function App() {
 
         </section>
 
+
+        {/* ======================================================
+            CAPTION QUALITY ANALYZER
+        ======================================================= */}
+
+        <section className="mt-10">
+
+          <div className="bg-white rounded-2xl border shadow-sm p-7">
+
+
+            <div className="mb-6">
+
+              <h3 className="text-2xl font-bold">
+
+                📊 Caption Quality & Engagement Analyzer
+
+              </h3>
+
+
+              <p className="text-gray-500 mt-1">
+
+                Analyze your caption and discover how to improve
+                its quality and engagement potential.
+
+              </p>
+
+            </div>
+
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+
+              {/* ==================================================
+                  ANALYZER INPUT
+              ================================================== */}
+
+              <div>
+
+                <label className="block text-sm font-medium mb-2">
+
+                  Caption to Analyze
+
+                </label>
+
+
+                <textarea
+
+                  value={analyzeCaptionText}
+
+                  onChange={(event) =>
+                    setAnalyzeCaptionText(
+                      event.target.value
+                    )
+                  }
+
+                  placeholder="Paste your social media caption here..."
+
+                  rows="10"
+
+                  className="w-full border rounded-xl p-4 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+
+                />
+
+
+                <div className="mt-4">
+
+                  <label className="block text-sm font-medium mb-2">
+
+                    Platform
+
+                  </label>
+
+
+                  <select
+
+                    value={analyzePlatform}
+
+                    onChange={(event) =>
+                      setAnalyzePlatform(
+                        event.target.value
+                      )
+                    }
+
+                    className="w-full border rounded-xl p-3"
+
+                  >
+
+                    <option>
+                      Instagram
+                    </option>
+
+                    <option>
+                      LinkedIn
+                    </option>
+
+                    <option>
+                      Facebook
+                    </option>
+
+                    <option>
+                      X
+                    </option>
+
+                  </select>
+
+                </div>
+
+
+                <button
+
+                  onClick={handleAnalyzeCaption}
+
+                  disabled={analysisLoading}
+
+                  className="w-full mt-5 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3.5 rounded-xl disabled:opacity-50"
+
+                >
+
+                  {analysisLoading
+
+                    ? "🤖 Analyzing..."
+
+                    : "📊 Analyze Caption"
+
+                  }
+
+                </button>
+
+              </div>
+
+
+              {/* ==================================================
+                  ANALYZER OUTPUT
+              ================================================== */}
+
+              <div>
+
+                {!analysisResult &&
+                  !analysisLoading && (
+
+                    <div className="h-full min-h-[420px] bg-slate-50 border rounded-xl flex items-center justify-center text-center text-gray-400 p-6">
+
+                      <div>
+
+                        <div className="text-6xl mb-5">
+
+                          📊
+
+                        </div>
+
+
+                        <p>
+
+                          Your caption analysis
+                          will appear here.
+
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+
+                {analysisLoading && (
+
+                  <div className="h-full min-h-[420px] bg-slate-50 border rounded-xl flex items-center justify-center text-center">
+
+                    <div>
+
+                      <div className="text-6xl animate-pulse mb-5">
+
+                        🤖
+
+                      </div>
+
+
+                      <p className="font-medium">
+
+                        AI is analyzing your caption...
+
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                )}
+
+
+                {analysisResult &&
+                  !analysisLoading && (
+
+                    <div className="space-y-5">
+
+
+                      {/* SCORE */}
+
+                      <div className="border rounded-2xl p-6 text-center">
+
+                        <p className="text-sm text-gray-500 mb-2">
+
+                          Overall Caption Score
+
+                        </p>
+
+
+                        <div
+                          className={`text-6xl font-bold ${getScoreColor(
+                            Number(analysisResult.score)
+                          )}`}
+                        >
+
+                          {analysisResult.score}
+
+                          <span className="text-2xl text-gray-400">
+
+                            /100
+
+                          </span>
+
+                        </div>
+
+
+                        <div className="mt-3">
+
+                          <span className="inline-block bg-purple-100 text-purple-700 px-4 py-2 rounded-full font-semibold">
+
+                            {analysisResult.grade}
+
+                          </span>
+
+                        </div>
+
+                      </div>
+
+
+                      {/* METRICS */}
+
+                      <div className="grid grid-cols-2 gap-3">
+
+
+                        <div className="bg-slate-50 border rounded-xl p-4">
+
+                          <p className="text-xs text-gray-500">
+
+                            Readability
+
+                          </p>
+
+                          <p className="font-semibold mt-1">
+
+                            {analysisResult.readability}
+
+                          </p>
+
+                        </div>
+
+
+                        <div className="bg-slate-50 border rounded-xl p-4">
+
+                          <p className="text-xs text-gray-500">
+
+                            Tone
+
+                          </p>
+
+                          <p className="font-semibold mt-1">
+
+                            {analysisResult.tone}
+
+                          </p>
+
+                        </div>
+
+
+                        <div className="bg-slate-50 border rounded-xl p-4">
+
+                          <p className="text-xs text-gray-500">
+
+                            Engagement
+
+                          </p>
+
+                          <p className="font-semibold mt-1">
+
+                            {analysisResult.engagement}
+
+                          </p>
+
+                        </div>
+
+
+                        <div className="bg-slate-50 border rounded-xl p-4">
+
+                          <p className="text-xs text-gray-500">
+
+                            Hook
+
+                          </p>
+
+                          <p className="font-semibold mt-1">
+
+                            {analysisResult.hook}
+
+                          </p>
+
+                        </div>
+
+
+                        <div className="bg-slate-50 border rounded-xl p-4">
+
+                          <p className="text-xs text-gray-500">
+
+                            Call to Action
+
+                          </p>
+
+                          <p className="font-semibold mt-1">
+
+                            {analysisResult.cta}
+
+                          </p>
+
+                        </div>
+
+
+                        <div className="bg-slate-50 border rounded-xl p-4">
+
+                          <p className="text-xs text-gray-500">
+
+                            Hashtags
+
+                          </p>
+
+                          <p className="font-semibold mt-1">
+
+                            {analysisResult.hashtag_quality}
+
+                          </p>
+
+                        </div>
+
+
+                        <div className="bg-slate-50 border rounded-xl p-4">
+
+                          <p className="text-xs text-gray-500">
+
+                            Clarity
+
+                          </p>
+
+                          <p className="font-semibold mt-1">
+
+                            {analysisResult.clarity}
+
+                          </p>
+
+                        </div>
+
+
+                        <div className="bg-slate-50 border rounded-xl p-4">
+
+                          <p className="text-xs text-gray-500">
+
+                            Audience Appeal
+
+                          </p>
+
+                          <p className="font-semibold mt-1">
+
+                            {analysisResult.audience_appeal}
+
+                          </p>
+
+                        </div>
+
+                      </div>
+
+
+                      {/* SUGGESTIONS */}
+
+                      <div>
+
+                        <h4 className="font-semibold mb-3">
+
+                          💡 AI Improvement Suggestions
+
+                        </h4>
+
+
+                        <div className="space-y-3">
+
+                          {analysisResult.suggestions?.map(
+
+                            (suggestion, index) => (
+
+                              <div
+
+                                key={index}
+
+                                className="flex gap-3 bg-purple-50 border border-purple-100 rounded-xl p-4"
+
+                              >
+
+                                <span className="text-purple-600 font-bold">
+
+                                  {index + 1}
+
+                                </span>
+
+
+                                <p className="text-gray-700">
+
+                                  {suggestion}
+
+                                </p>
+
+                              </div>
+
+                            )
+
+                          )}
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+        <RagGenerator />
+        {/* History Section */}
+        <History />
       </main>
 
 

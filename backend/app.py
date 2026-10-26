@@ -1,10 +1,21 @@
 from flask import Flask, jsonify, request
+from flask import request, jsonify
 from flask_cors import CORS
-
+from rag.routes import rag_bp
+from rag.retrieval_routes import retrieval_bp
+from rag.storage_routes import storage_bp
+from rag.generation_routes import generation_bp
 from services.ai_service import (
     generate_caption,
     generate_image_caption,
-    rewrite_caption
+    rewrite_caption,
+    analyze_caption
+)
+
+from services.database import (
+    save_history,
+    get_history,
+    delete_history
 )
 
 
@@ -13,7 +24,10 @@ from services.ai_service import (
 # ============================================================
 
 app = Flask(__name__)
-
+app.register_blueprint(rag_bp)
+app.register_blueprint(storage_bp)
+app.register_blueprint(retrieval_bp)
+app.register_blueprint(generation_bp)
 CORS(app)
 
 
@@ -25,8 +39,12 @@ CORS(app)
 def home():
 
     return jsonify({
+
         "success": True,
-        "message": "CaptionCraft AI Backend is running!"
+
+        "message":
+            "CaptionCraft AI Backend is running!"
+
     })
 
 
@@ -48,8 +66,12 @@ def generate_text_caption():
         if not data:
 
             return jsonify({
+
                 "success": False,
-                "error": "No JSON data received"
+
+                "error":
+                    "No JSON data received"
+
             }), 400
 
 
@@ -92,8 +114,12 @@ def generate_text_caption():
         if not topic:
 
             return jsonify({
+
                 "success": False,
-                "error": "Topic is required"
+
+                "error":
+                    "Topic is required"
+
             }), 400
 
 
@@ -114,6 +140,32 @@ def generate_text_caption():
         )
 
 
+        # ====================================================
+        # SAVE TO DATABASE
+        # ====================================================
+
+        try:
+
+            save_history(
+
+                history_type="generated",
+
+                platform=platform,
+
+                input_text=topic,
+
+                result=result
+
+            )
+
+        except Exception as db_error:
+
+            print(
+                "DATABASE SAVE ERROR:",
+                str(db_error)
+            )
+
+
         return jsonify({
 
             "success": True,
@@ -126,10 +178,9 @@ def generate_text_caption():
     except Exception as e:
 
         print(
-            "TEXT GENERATION ERROR:"
+            "TEXT GENERATION ERROR:",
+            str(e)
         )
-
-        print(str(e))
 
 
         return jsonify({
@@ -159,7 +210,8 @@ def generate_image():
 
                 "success": False,
 
-                "error": "No image uploaded"
+                "error":
+                    "No image uploaded"
 
             }), 400
 
@@ -173,7 +225,8 @@ def generate_image():
 
                 "success": False,
 
-                "error": "Please select an image"
+                "error":
+                    "Please select an image"
 
             }), 400
 
@@ -197,10 +250,9 @@ def generate_image():
 
                 "success": False,
 
-                "error": (
+                "error":
                     "Unsupported image format. "
                     "Use JPG, JPEG, PNG or WEBP."
-                )
 
             }), 400
 
@@ -244,6 +296,32 @@ def generate_image():
         )
 
 
+        # ====================================================
+        # SAVE IMAGE CAPTION RESULT
+        # ====================================================
+
+        try:
+
+            save_history(
+
+                history_type="generated",
+
+                platform=platform,
+
+                input_text="Image Caption",
+
+                result=result
+
+            )
+
+        except Exception as db_error:
+
+            print(
+                "DATABASE SAVE ERROR:",
+                str(db_error)
+            )
+
+
         return jsonify({
 
             "success": True,
@@ -256,10 +334,9 @@ def generate_image():
     except Exception as e:
 
         print(
-            "IMAGE GENERATION ERROR:"
+            "IMAGE GENERATION ERROR:",
+            str(e)
         )
-
-        print(str(e))
 
 
         return jsonify({
@@ -292,7 +369,8 @@ def rewrite():
 
                 "success": False,
 
-                "error": "No JSON data received"
+                "error":
+                    "No JSON data received"
 
             }), 400
 
@@ -321,20 +399,51 @@ def rewrite():
 
                 "success": False,
 
-                "error": "Caption is required"
+                "error":
+                    "Caption is required"
 
             }), 400
 
 
         result = rewrite_caption(
 
-            original_caption=original_caption,
+            original_caption=
+                original_caption,
 
-            rewrite_style=rewrite_style,
+            rewrite_style=
+                rewrite_style,
 
-            platform=platform
+            platform=
+                platform
 
         )
+
+
+        # ====================================================
+        # SAVE REWRITE RESULT
+        # ====================================================
+
+        try:
+
+            save_history(
+
+                history_type="rewritten",
+
+                platform=platform,
+
+                input_text=
+                    original_caption,
+
+                result=result
+
+            )
+
+        except Exception as db_error:
+
+            print(
+                "DATABASE SAVE ERROR:",
+                str(db_error)
+            )
 
 
         return jsonify({
@@ -349,10 +458,208 @@ def rewrite():
     except Exception as e:
 
         print(
-            "REWRITE ERROR:"
+            "REWRITE ERROR:",
+            str(e)
         )
 
-        print(str(e))
+
+        return jsonify({
+
+            "success": False,
+
+            "error": str(e)
+
+        }), 500
+
+
+# ============================================================
+# CAPTION QUALITY ANALYZER
+# ============================================================
+
+@app.route(
+    "/analyze-caption",
+    methods=["POST"]
+)
+def analyze():
+
+    try:
+
+        data = request.get_json()
+
+
+        if not data:
+
+            return jsonify({
+
+                "success": False,
+
+                "error":
+                    "No JSON data received"
+
+            }), 400
+
+
+        caption = data.get(
+            "caption",
+            ""
+        ).strip()
+
+
+        platform = data.get(
+            "platform",
+            "Instagram"
+        )
+
+
+        if not caption:
+
+            return jsonify({
+
+                "success": False,
+
+                "error":
+                    "Caption is required"
+
+            }), 400
+
+
+        result = analyze_caption(
+
+            caption=caption,
+
+            platform=platform
+
+        )
+
+
+        # ====================================================
+        # SAVE ANALYSIS
+        # ====================================================
+
+        try:
+
+            save_history(
+
+                history_type="analyzed",
+
+                platform=platform,
+
+                input_text=caption,
+
+                result=result
+
+            )
+
+        except Exception as db_error:
+
+            print(
+                "DATABASE SAVE ERROR:",
+                str(db_error)
+            )
+
+
+        return jsonify({
+
+            "success": True,
+
+            "result": result
+
+        })
+
+
+    except Exception as e:
+
+        print(
+            "ANALYZER ERROR:",
+            str(e)
+        )
+
+
+        return jsonify({
+
+            "success": False,
+
+            "error": str(e)
+
+        }), 500
+
+
+# ============================================================
+# GET CAPTION HISTORY
+# ============================================================
+
+
+@app.route("/history", methods=["GET"])
+def history():
+    try:
+        auth_header = request.headers.get("Authorization", "")
+
+        if not auth_header.startswith("Bearer "):
+            return jsonify({
+                "success": False,
+                "error": "Authentication token is missing."
+            }), 401
+
+        access_token = auth_header.split(" ", 1)[1].strip()
+
+        if not access_token:
+            return jsonify({
+                "success": False,
+                "error": "Authentication token is empty."
+            }), 401
+
+        history_data = get_history(access_token)
+
+        return jsonify({
+            "success": True,
+            "history": history_data
+        }), 200
+
+    except Exception as e:
+        print("HISTORY ERROR:", str(e))
+
+        return jsonify({
+            "success": False,
+            "error": "Unable to load caption history."
+        }), 500
+
+
+
+# ============================================================
+# DELETE HISTORY
+# ============================================================
+
+@app.route(
+    "/history/<int:history_id>",
+    methods=["DELETE"]
+)
+def remove_history(
+    history_id
+):
+
+    try:
+
+        delete_history(
+            history_id
+        )
+
+
+        return jsonify({
+
+            "success": True,
+
+            "message":
+                "History deleted successfully"
+
+        })
+
+
+    except Exception as e:
+
+        print(
+            "DELETE HISTORY ERROR:",
+            str(e)
+        )
 
 
         return jsonify({
