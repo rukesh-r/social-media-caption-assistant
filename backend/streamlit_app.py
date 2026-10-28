@@ -66,70 +66,103 @@ if "user_email" not in st.session_state:
     st.session_state.user_email = None
 
 
+
 def login():
     st.title("CaptionCraft-AI")
-    st.subheader("Sign in")
+    st.subheader("Welcome!")
 
-    with st.form("login_form"):
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button(
-            "Sign in",
-            type="primary",
-            use_container_width=True,
-        )
+    login_tab, signup_tab = st.tabs(["Sign in", "Sign up"])
 
-    if submitted:
-        if not email.strip() or not password:
-            st.warning("Enter your email and password.")
-            return
-
-        try:
-            response = supabase.auth.sign_in_with_password(
-                {
-                    "email": email.strip(),
-                    "password": password,
-                }
+    with login_tab:
+        with st.form("login_form"):
+            email = st.text_input("Email", key="login_email")
+            password = st.text_input(
+                "Password",
+                type="password",
+                key="login_password",
+            )
+            submitted = st.form_submit_button(
+                "Sign in",
+                type="primary",
+                use_container_width=True,
             )
 
-            session = response.session
-            if not session or not session.access_token:
-                st.error("Login did not return a valid session.")
-                return
+        if submitted:
+            if not email.strip() or not password:
+                st.warning("Enter your email and password.")
+            else:
+                try:
+                    response = supabase.auth.sign_in_with_password({
+                        "email": email.strip(),
+                        "password": password,
+                    })
 
-            st.session_state.access_token = session.access_token
-            st.session_state.user_email = email.strip()
-            st.rerun()
+                    session = response.session
+                    if not session or not session.access_token:
+                        st.error("Sign-in did not return a valid session.")
+                    else:
+                        st.session_state.access_token = session.access_token
+                        st.session_state.user_email = email.strip()
+                        st.rerun()
 
-        except Exception:
-            st.error("Sign-in failed. Check your credentials and Supabase Auth settings.")
+                except Exception:
+                    st.error(
+                        "Sign-in failed. Check your email, password, "
+                        "and Supabase Auth settings."
+                    )
 
+    with signup_tab:
+        with st.form("signup_form"):
+            new_email = st.text_input("Email", key="signup_email")
+            new_password = st.text_input(
+                "Password",
+                type="password",
+                key="signup_password",
+            )
+            confirm_password = st.text_input(
+                "Confirm password",
+                type="password",
+                key="signup_confirm_password",
+            )
 
-def record_history(history_type, platform, input_text, result):
-    """Save results against the authenticated user's Supabase account."""
-    try:
-        save_history(
-            st.session_state.access_token,
-            history_type,
-            platform,
-            input_text,
-            result,
-        )
-    except Exception as exc:
-        st.warning(f"Result generated, but history could not be saved: {exc}")
+            signup_submitted = st.form_submit_button(
+                "Create account",
+                type="primary",
+                use_container_width=True,
+            )
 
+        if signup_submitted:
+            if not new_email.strip() or not new_password:
+                st.warning("Enter an email and password.")
+            elif new_password != confirm_password:
+                st.error("Passwords do not match.")
+            elif len(new_password) < 8:
+                st.warning("Use a password with at least 8 characters.")
+            else:
+                try:
+                    response = supabase.auth.sign_up({
+                        "email": new_email.strip(),
+                        "password": new_password,
+                    })
 
-def show_result(result):
-    st.success("Completed!")
-    st.json(result)
+                    session = response.session
 
-    if isinstance(result, dict) and result.get("caption"):
-        st.text_area(
-            "Main caption — copy from here",
-            value=result["caption"],
-            height=130,
-            key=f"copy_caption_{st.session_state.get('result_counter', 0)}",
-        )
+                    if session and session.access_token:
+                        st.session_state.access_token = session.access_token
+                        st.session_state.user_email = new_email.strip()
+                        st.success("Account created successfully!")
+                        st.rerun()
+                    else:
+                        st.success(
+                            "Sign-up request submitted. Check your email "
+                            "to confirm your account, then sign in."
+                        )
+
+                except Exception:
+                    st.error(
+                        "Sign-up failed. Check your email, password, "
+                        "and Supabase Auth settings."
+                    )
 
 
 # ---------------------------------------------------------
