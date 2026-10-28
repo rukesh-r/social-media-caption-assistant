@@ -67,6 +67,53 @@ if "user_email" not in st.session_state:
 
 
 
+# ---------------------------------------------------------
+# SAVE GENERATED RESULTS TO SUPABASE HISTORY
+# ---------------------------------------------------------
+def record_history(history_type, platform, input_text, result):
+    """Save a generated result for the currently signed-in user."""
+    try:
+        save_history(
+            access_token=st.session_state.access_token,
+            history_type=history_type,
+            platform=platform,
+            input_text=input_text,
+            result=result,
+        )
+    except Exception as exc:
+        st.warning(
+            f"Result generated, but history could not be saved: {exc}"
+        )
+
+
+# ---------------------------------------------------------
+# DISPLAY GENERATED RESULTS
+# ---------------------------------------------------------
+def show_result(result):
+    """Display the generated caption and its supporting details."""
+    st.success("Completed!")
+
+    if not isinstance(result, dict):
+        st.write(result)
+        return
+
+    caption = result.get("caption") or result.get("rewritten_caption")
+
+    if caption:
+        st.subheader("Generated Caption")
+        st.text_area(
+            "Copy your caption",
+            value=caption,
+            height=150,
+            key=f"caption_result_{st.session_state.get('result_counter', 0)}",
+        )
+        st.session_state.result_counter = (
+            st.session_state.get("result_counter", 0) + 1
+        )
+
+    st.subheader("Full Result")
+    st.json(result)
+
 def login():
     st.title("CaptionCraft-AI")
     st.subheader("Welcome!")
