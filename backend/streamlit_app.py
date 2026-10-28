@@ -89,30 +89,103 @@ def record_history(history_type, platform, input_text, result):
 # ---------------------------------------------------------
 # DISPLAY GENERATED RESULTS
 # ---------------------------------------------------------
+
 def show_result(result):
-    """Display the generated caption and its supporting details."""
-    st.success("Completed!")
+    """Display generated caption content in a readable format."""
 
     if not isinstance(result, dict):
         st.write(result)
         return
 
+    st.success("Caption generated successfully!")
+
+    # Main caption
     caption = result.get("caption") or result.get("rewritten_caption")
 
     if caption:
-        st.subheader("Generated Caption")
+        st.subheader("📝 Main Caption")
         st.text_area(
-            "Copy your caption",
+            "Your caption",
             value=caption,
             height=150,
-            key=f"caption_result_{st.session_state.get('result_counter', 0)}",
+            key=f"main_caption_{st.session_state.get('result_counter', 0)}",
         )
-        st.session_state.result_counter = (
-            st.session_state.get("result_counter", 0) + 1
+        st.button(
+            "Copy caption",
+            key=f"copy_caption_{st.session_state.get('result_counter', 0)}",
+            on_click=st.session_state.update,
+            args=({"caption_to_copy": caption},),
         )
+        if st.session_state.get("caption_to_copy") == caption:
+            st.caption("Caption selected for copying. Use Ctrl+A and Ctrl+C in the text box above.")
 
-    st.subheader("Full Result")
-    st.json(result)
+    # Alternative captions
+    alternatives = (
+        result.get("alternatives")
+        or result.get("alternative_versions")
+        or []
+    )
+    if alternatives:
+        st.subheader("✨ Alternative Captions")
+        for i, alternative in enumerate(alternatives, start=1):
+            st.markdown(f"**Option {i}**")
+            st.write(alternative)
+
+    # Hashtags
+    hashtags = result.get("hashtags", [])
+    if hashtags:
+        st.subheader("#️⃣ Hashtags")
+        st.code(" ".join(hashtags), language=None)
+
+    # Emojis
+    emojis = result.get("emojis", [])
+    if emojis:
+        st.subheader("😀 Suggested Emojis")
+        st.write(" ".join(emojis))
+
+    # Call to action
+    cta = result.get("call_to_action")
+    if cta:
+        st.subheader("📢 Call to Action")
+        st.write(cta)
+
+    # Caption quality analysis
+    if "score" in result:
+        st.subheader("📊 Quality Analysis")
+        st.metric("Caption Score", f"{result['score']}/100")
+        st.write("**Grade:**", result.get("grade", "N/A"))
+        for key in (
+            "readability",
+            "tone",
+            "engagement",
+            "hook",
+            "cta",
+            "hashtag_quality",
+            "clarity",
+            "audience_appeal",
+        ):
+            if result.get(key) is not None:
+                st.write(f"**{key.replace('_', ' ').title()}:** {result[key]}")
+
+        suggestions = result.get("suggestions", [])
+        if suggestions:
+            st.write("**Suggestions for improvement**")
+            for suggestion in suggestions:
+                st.markdown(f"- {suggestion}")
+
+    # RAG sources
+    metadata = result.get("rag_metadata")
+    if metadata:
+        with st.expander("📚 Retrieved Knowledge Sources"):
+            st.write("Relevant chunks retrieved:", metadata.get("retrieved_count", 0))
+            for source in metadata.get("sources", []):
+                st.markdown(f"**{source.get('document_name', 'Document')}**")
+                st.caption(f"Similarity: {source.get('similarity', 'N/A')}")
+
+    st.session_state.result_counter = (
+        st.session_state.get("result_counter", 0) + 1
+    )
+
 
 def login():
     st.title("CaptionCraft-AI")
