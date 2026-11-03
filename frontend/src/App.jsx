@@ -120,10 +120,18 @@ export default function App() {
     setImagePreview(URL.createObjectURL(file));
   };
 
+  const getAuthHeader = async () => {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) throw new Error("Not authenticated.");
+    return { Authorization: `Bearer ${token}` };
+  };
+
   const generateCaption = async () => {
     if (!formData.topic.trim() && !image) { showToast("Enter a topic or upload an image.", "error"); return; }
     setLoading(true); setResult(null);
     try {
+      const headers = await getAuthHeader();
       let response;
       if (image) {
         const data = new FormData();
@@ -132,9 +140,9 @@ export default function App() {
         data.append("tone", formData.tone);
         data.append("audience", formData.audience);
         data.append("length", formData.length);
-        response = await axios.post("http://127.0.0.1:5000/generate-image-caption", data);
+        response = await axios.post("http://127.0.0.1:5000/generate-image-caption", data, { headers });
       } else {
-        response = await axios.post("http://127.0.0.1:5000/generate-caption", formData);
+        response = await axios.post("http://127.0.0.1:5000/generate-caption", formData, { headers });
       }
       if (response.data.success) setResult(response.data.result);
       else showToast(response.data.error, "error");
@@ -147,7 +155,8 @@ export default function App() {
     if (!originalCaption.trim()) { showToast("Enter a caption to rewrite.", "error"); return; }
     setRewriteLoading(true); setRewriteResult(null);
     try {
-      const response = await axios.post("http://127.0.0.1:5000/rewrite-caption", { caption: originalCaption, style: rewriteStyle, platform: rewritePlatform });
+      const headers = await getAuthHeader();
+      const response = await axios.post("http://127.0.0.1:5000/rewrite-caption", { caption: originalCaption, style: rewriteStyle, platform: rewritePlatform }, { headers });
       if (response.data.success) setRewriteResult(response.data.result);
       else showToast(response.data.error, "error");
     } catch (err) {
@@ -159,7 +168,8 @@ export default function App() {
     if (!analyzeCaptionText.trim()) { showToast("Enter a caption to analyze.", "error"); return; }
     setAnalysisLoading(true); setAnalysisResult(null);
     try {
-      const response = await axios.post("http://127.0.0.1:5000/analyze-caption", { caption: analyzeCaptionText, platform: analyzePlatform });
+      const headers = await getAuthHeader();
+      const response = await axios.post("http://127.0.0.1:5000/analyze-caption", { caption: analyzeCaptionText, platform: analyzePlatform }, { headers });
       if (response.data.success) setAnalysisResult(response.data.result);
       else showToast(response.data.error, "error");
     } catch (err) {

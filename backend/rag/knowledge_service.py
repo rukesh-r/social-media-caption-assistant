@@ -58,13 +58,14 @@ def list_documents(access_token):
     Return a list of unique documents uploaded by the user,
     with chunk counts.
     """
-    get_user_from_token(access_token)
+    user_id = get_user_from_token(access_token)
     user_client = get_authenticated_client(access_token)
 
     response = (
         user_client
         .table("knowledge_chunks")
         .select("document_name, id")
+        .eq("user_id", user_id)
         .execute()
     )
 
@@ -85,7 +86,7 @@ def delete_document(access_token, document_name):
     """
     Delete all chunks belonging to a document for the authenticated user.
     """
-    get_user_from_token(access_token)
+    user_id = get_user_from_token(access_token)
     user_client = get_authenticated_client(access_token)
 
     response = (
@@ -93,6 +94,7 @@ def delete_document(access_token, document_name):
         .table("knowledge_chunks")
         .delete()
         .eq("document_name", document_name)
+        .eq("user_id", user_id)
         .execute()
     )
 
