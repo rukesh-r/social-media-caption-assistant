@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import API_BASE_URL from "./apiConfig";
 import Navbar from "./Navbar";
 import History from "./History.jsx";
 import RagGenerator from "./RagGenerator";
@@ -147,8 +148,8 @@ export default function App({ session: initialSession, onSignOut }) {
       showToast("Please upload a JPG, PNG, or WEBP file.", "error");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      showToast("Image must be smaller than 10 MB.", "error");
+    if (file.size > 4 * 1024 * 1024) {
+      showToast("Image must be smaller than 4 MB.", "error");
       return;
     }
     setImage(file);
@@ -178,9 +179,9 @@ export default function App({ session: initialSession, onSignOut }) {
         data.append("tone", formData.tone);
         data.append("audience", formData.audience);
         data.append("length", formData.length);
-        response = await axios.post("http://127.0.0.1:5000/generate-image-caption", data);
+        response = await axios.post(`${API_BASE_URL}/generate-image-caption`, data);
       } else {
-        response = await axios.post("http://127.0.0.1:5000/generate-caption", formData);
+        response = await axios.post(`${API_BASE_URL}/generate-caption`, formData);
       }
       if (response.data.success) {
         setResult(response.data.result);
@@ -204,7 +205,7 @@ export default function App({ session: initialSession, onSignOut }) {
     setRewriteLoading(true);
     setRewriteResult(null);
     try {
-      const response = await axios.post("http://127.0.0.1:5000/rewrite-caption", {
+      const response = await axios.post(`${API_BASE_URL}/rewrite-caption`, {
         caption: originalCaption,
         style: rewriteStyle,
         platform: rewritePlatform
@@ -231,7 +232,7 @@ export default function App({ session: initialSession, onSignOut }) {
     setAnalysisLoading(true);
     setAnalysisResult(null);
     try {
-      const response = await axios.post("http://127.0.0.1:5000/analyze-caption", {
+      const response = await axios.post(`${API_BASE_URL}/analyze-caption`, {
         caption: analyzeCaptionText,
         platform: analyzePlatform
       });

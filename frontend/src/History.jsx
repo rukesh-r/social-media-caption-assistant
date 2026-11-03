@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
+import API_BASE_URL from "./apiConfig";
 import { HistoryIcon, RefreshIcon, XIcon, InboxIcon, TrashIcon } from "./Icons";
 
 export default function History({ showToast }) {
@@ -12,7 +13,7 @@ export default function History({ showToast }) {
   const loadHistory = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://127.0.0.1:5000/history");
+      const res = await axios.get(`${API_BASE_URL}/history`);
       if (res.data.success) setHistory(res.data.history || []);
     } catch {
       showToast?.("Unable to load history.", "error");
@@ -23,7 +24,7 @@ export default function History({ showToast }) {
 
   const deleteItem = async (id) => {
     try {
-      await axios.delete(`http://127.0.0.1:5000/history/${id}`);
+      await axios.delete(`${API_BASE_URL}/history/${id}`);
       setHistory((h) => h.filter((i) => i.id !== id));
       showToast?.("Item deleted from history.");
     } catch {

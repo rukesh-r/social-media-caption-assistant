@@ -25,6 +25,27 @@ from services.database import (
 
 app = Flask(__name__)
 CORS(app)
+
+
+# ============================================================
+# WSGI MIDDLEWARE: STRIP /api/ PREFIX FOR VERCEL DEPLOYMENT
+# ============================================================
+class StripApiPrefix:
+    """Strip the /api/ prefix so existing Flask routes work unchanged."""
+
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        path = environ.get("PATH_INFO", "")
+        if path.startswith("/api/"):
+            environ["PATH_INFO"] = path[4:]
+            environ["SCRIPT_NAME"] = environ.get("SCRIPT_NAME", "") + "/api"
+        return self.app(environ, start_response)
+
+
+app.wsgi_app = StripApiPrefix(app.wsgi_app)
+
 app.register_blueprint(storage_bp)
 app.register_blueprint(retrieval_bp)
 app.register_blueprint(generation_bp)

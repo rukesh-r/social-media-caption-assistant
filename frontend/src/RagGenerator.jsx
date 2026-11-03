@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import API_BASE_URL from "./apiConfig";
 import {
   BrainIcon,
   FileTextIcon,
@@ -78,7 +79,7 @@ export default function RagGenerator({ showToast }) {
     try {
       const data = new FormData();
       data.append("file", uploadFile);
-      const res = await axios.post("http://127.0.0.1:5000/rag/upload-document", data);
+      const res = await axios.post(`${API_BASE_URL}/rag/upload-document`, data);
       if (!res.data.success) throw new Error(res.data.error || "Upload failed.");
       setUploadResult(res.data);
       setUploadFile(null);
@@ -100,7 +101,7 @@ export default function RagGenerator({ showToast }) {
     setError("");
     setResult(null);
     try {
-      const res = await axios.post("http://127.0.0.1:5000/rag/generate-caption", form);
+      const res = await axios.post(`${API_BASE_URL}/rag/generate-caption`, form);
       if (!res.data.success) throw new Error(res.data.error || "Generation failed.");
       setResult(res.data.result);
       showToast?.("RAG-grounded caption generated!");
