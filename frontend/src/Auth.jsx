@@ -324,6 +324,18 @@ export default function Auth({ onAuthSuccess }) {
           </div>
           <span className="text-slate-400">© 2026 CaptionCraft AI</span>
         </div>
+
+        {/* Course & Mentorship Credit */}
+        <div className="mt-4 pt-4 border-t border-slate-100 text-center">
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Built under the course of{" "}
+            <span className="font-bold text-slate-700">Generative AI – Artificial Intelligence</span>
+            {" "}with the mentorship of{" "}
+            <span className="font-bold text-purple-700">Shirwin Prince</span>
+            {" "}from{" "}
+            <span className="font-bold text-slate-700">Infoziant</span>
+          </p>
+        </div>
       </footer>
     </div>
   );
