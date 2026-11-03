@@ -349,29 +349,30 @@ Evaluate the caption based on:
 
 Return ONLY valid JSON.
 
-Use exactly this structure:
+Use exactly this structure (replace every value with your actual evaluation):
 
 {{
-    "score": 82,
-    "grade": "Excellent",
-    "readability": "Good",
-    "tone": "Positive",
-    "engagement": "High",
-    "hook": "Strong",
-    "cta": "Moderate",
-    "hashtag_quality": "Good",
-    "clarity": "Excellent",
-    "audience_appeal": "High",
+    "score": <integer between 0 and 100 reflecting your honest evaluation>,
+    "grade": "<one of: Excellent | Good | Average | Needs Improvement>",
+    "readability": "<your assessment>",
+    "tone": "<your assessment>",
+    "engagement": "<your assessment>",
+    "hook": "<your assessment>",
+    "cta": "<your assessment>",
+    "hashtag_quality": "<your assessment>",
+    "clarity": "<your assessment>",
+    "audience_appeal": "<your assessment>",
     "suggestions": [
-        "Add a stronger opening hook",
-        "Use a more specific call to action",
-        "Add more relevant hashtags"
+        "<specific suggestion 1>",
+        "<specific suggestion 2>",
+        "<specific suggestion 3>"
     ]
 }}
 
 Rules:
 
-- Score must be between 0 and 100.
+- Score MUST reflect the actual quality of the caption — do NOT use a default or example number.
+- A weak caption should score low (20–50). An average caption should score 50–70. A strong caption should score 70–90. An exceptional caption may score 90–100.
 - Grade must be one of:
   Excellent
   Good
