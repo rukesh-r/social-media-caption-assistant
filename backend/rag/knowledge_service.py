@@ -51,3 +51,49 @@ def store_document(file_bytes, filename, access_token):
         "chunk_count": len(chunks),
         "stored_count": len(response.data or [])
     }
+
+
+def list_documents(access_token):
+    """
+    Return a list of unique documents uploaded by the user,
+    with chunk counts.
+    """
+    get_user_from_token(access_token)
+    user_client = get_authenticated_client(access_token)
+
+    response = (
+        user_client
+        .table("knowledge_chunks")
+        .select("document_name, id")
+        .execute()
+    )
+
+    rows = response.data or []
+
+    counts = {}
+    for row in rows:
+        name = row["document_name"]
+        counts[name] = counts.get(name, 0) + 1
+
+    return [
+        {"document_name": name, "chunk_count": count}
+        for name, count in counts.items()
+    ]
+
+
+def delete_document(access_token, document_name):
+    """
+    Delete all chunks belonging to a document for the authenticated user.
+    """
+    get_user_from_token(access_token)
+    user_client = get_authenticated_client(access_token)
+
+    response = (
+        user_client
+        .table("knowledge_chunks")
+        .delete()
+        .eq("document_name", document_name)
+        .execute()
+    )
+
+    return {"deleted_count": len(response.data or [])}

@@ -1,7 +1,7 @@
 
 from flask import Blueprint, jsonify, request
 
-from rag.knowledge_service import store_document
+from rag.knowledge_service import store_document, list_documents, delete_document
 
 storage_bp = Blueprint("rag_storage", __name__)
 
@@ -55,3 +55,35 @@ def upload_document():
             "success": False,
             "error": "Document processing or storage failed. Check the backend terminal."
         }), 500
+
+
+@storage_bp.route("/rag/documents", methods=["GET"])
+def get_documents():
+    auth_header = request.headers.get("Authorization", "")
+    access_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
+
+    if not access_token:
+        return jsonify({"success": False, "error": "Authentication required."}), 401
+
+    try:
+        docs = list_documents(access_token)
+        return jsonify({"success": True, "documents": docs}), 200
+    except Exception as error:
+        print("RAG list error:", str(error))
+        return jsonify({"success": False, "error": "Unable to list documents."}), 500
+
+
+@storage_bp.route("/rag/documents/<path:document_name>", methods=["DELETE"])
+def remove_document(document_name):
+    auth_header = request.headers.get("Authorization", "")
+    access_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
+
+    if not access_token:
+        return jsonify({"success": False, "error": "Authentication required."}), 401
+
+    try:
+        result = delete_document(access_token, document_name)
+        return jsonify({"success": True, **result}), 200
+    except Exception as error:
+        print("RAG delete error:", str(error))
+        return jsonify({"success": False, "error": "Unable to delete document."}), 500

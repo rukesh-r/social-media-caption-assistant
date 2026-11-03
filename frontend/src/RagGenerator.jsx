@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 
 const PLATFORMS = ["Instagram", "LinkedIn", "Facebook", "X", "YouTube"];
@@ -26,6 +26,20 @@ export default function RagGenerator({ showToast }) {
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
 
+  // Documents list
+  const [documents, setDocuments] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+
+  const loadDocuments = async () => {
+    setDocsLoading(true);
+    try {
+      const res = await axios.get("http://127.0.0.1:5000/rag/documents");
+      if (res.data.success) setDocuments(res.data.documents);
+    } catch { /* silent */ } finally { setDocsLoading(false); }
+  };
+
+  useEffect(() => { loadDocuments(); }, []);
+
   const update = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
   const handleUpload = async () => {
@@ -39,10 +53,20 @@ export default function RagGenerator({ showToast }) {
       setUploadResult(res.data);
       setUploadFile(null);
       showToast?.(`✅ "${res.data.filename}" uploaded — ${res.data.chunk_count} chunks stored.`);
+      loadDocuments();
     } catch (err) {
       showToast?.(err.response?.data?.error || err.message || "Upload failed.", "error");
-    } finally {
-      setUploading(false); }
+    } finally { setUploading(false); }
+  };
+
+  const handleDeleteDocument = async (name) => {
+    try {
+      await axios.delete(`http://127.0.0.1:5000/rag/documents/${encodeURIComponent(name)}`);
+      setDocuments(d => d.filter(doc => doc.document_name !== name));
+      showToast?.("Document deleted.");
+    } catch (err) {
+      showToast?.(err.response?.data?.error || "Unable to delete document.", "error");
+    }
   };
 
   const generate = async (e) => {
@@ -104,6 +128,51 @@ export default function RagGenerator({ showToast }) {
           <div className="mt-4 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-sm text-emerald-800">
             ✅ <span className="font-semibold">{uploadResult.filename}</span> processed —{" "}
             {uploadResult.chunk_count} chunks stored ({uploadResult.character_count?.toLocaleString()} characters).
+          </div>
+        )}
+      </div>
+
+      {/* Documents list */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+        <div className="flex justify-between items-center mb-5">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">📚 Knowledge Base</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Documents stored in your knowledge base.</p>
+          </div>
+          <button onClick={loadDocuments}
+            className="text-sm border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 transition text-gray-600">
+            🔄 Refresh
+          </button>
+        </div>
+
+        {docsLoading && (
+          <div className="text-center py-8 text-gray-400 text-sm">Loading documents...</div>
+        )}
+
+        {!docsLoading && documents.length === 0 && (
+          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-8 text-center text-gray-400 text-sm">
+            No documents uploaded yet. Upload a PDF, TXT, or MD file above.
+          </div>
+        )}
+
+        {!docsLoading && documents.length > 0 && (
+          <div className="space-y-3">
+            {documents.map((doc) => (
+              <div key={doc.document_name}
+                className="flex items-center justify-between gap-4 border border-gray-100 rounded-2xl px-5 py-4 hover:border-purple-100 transition">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-2xl">📄</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{doc.document_name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{doc.chunk_count} chunks stored</p>
+                  </div>
+                </div>
+                <button onClick={() => handleDeleteDocument(doc.document_name)}
+                  className="shrink-0 text-xs text-red-400 hover:text-red-600 border border-red-100 rounded-lg px-3 py-1.5 hover:bg-red-50 transition">
+                  Delete
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
