@@ -27,18 +27,14 @@ def get_user_from_token(access_token):
         raise ValueError("Authentication token is required.")
 
     try:
-        response = supabase.auth.get_claims(jwt=access_token)
+        response = supabase.auth.get_user(jwt=access_token)
 
-        # Supabase SDK versions may return claims in different forms.
-        if isinstance(response, dict):
-            claims = response.get("claims", response)
-        else:
-            claims = getattr(response, "data", response)
+        user = getattr(response, "user", None)
 
-        if not isinstance(claims, dict):
-            raise ValueError("Invalid authentication token claims.")
+        if not user:
+            raise ValueError("Invalid or expired token.")
 
-        user_id = claims.get("sub")
+        user_id = getattr(user, "id", None)
 
         if not user_id:
             raise ValueError("User ID is missing from token.")

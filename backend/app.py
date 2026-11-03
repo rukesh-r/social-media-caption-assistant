@@ -147,17 +147,17 @@ def generate_text_caption():
 
         try:
 
-            save_history(
+            auth_header = request.headers.get("Authorization", "")
+            access_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
 
-                history_type="generated",
-
-                platform=platform,
-
-                input_text=topic,
-
-                result=result
-
-            )
+            if access_token:
+                save_history(
+                    access_token=access_token,
+                    history_type="generated",
+                    platform=platform,
+                    input_text=topic,
+                    result=result
+                )
 
         except Exception as db_error:
 
@@ -303,17 +303,17 @@ def generate_image():
 
         try:
 
-            save_history(
+            auth_header = request.headers.get("Authorization", "")
+            access_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
 
-                history_type="generated",
-
-                platform=platform,
-
-                input_text="Image Caption",
-
-                result=result
-
-            )
+            if access_token:
+                save_history(
+                    access_token=access_token,
+                    history_type="generated",
+                    platform=platform,
+                    input_text="Image Caption",
+                    result=result
+                )
 
         except Exception as db_error:
 
@@ -426,18 +426,17 @@ def rewrite():
 
         try:
 
-            save_history(
+            auth_header = request.headers.get("Authorization", "")
+            access_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
 
-                history_type="rewritten",
-
-                platform=platform,
-
-                input_text=
-                    original_caption,
-
-                result=result
-
-            )
+            if access_token:
+                save_history(
+                    access_token=access_token,
+                    history_type="rewritten",
+                    platform=platform,
+                    input_text=original_caption,
+                    result=result
+                )
 
         except Exception as db_error:
 
@@ -539,17 +538,17 @@ def analyze():
 
         try:
 
-            save_history(
+            auth_header = request.headers.get("Authorization", "")
+            access_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
 
-                history_type="analyzed",
-
-                platform=platform,
-
-                input_text=caption,
-
-                result=result
-
-            )
+            if access_token:
+                save_history(
+                    access_token=access_token,
+                    history_type="analyzed",
+                    platform=platform,
+                    input_text=caption,
+                    result=result
+                )
 
         except Exception as db_error:
 
@@ -596,33 +595,17 @@ def history():
         auth_header = request.headers.get("Authorization", "")
 
         if not auth_header.startswith("Bearer "):
-            return jsonify({
-                "success": False,
-                "error": "Authentication token is missing."
-            }), 401
+            return jsonify({"success": False, "error": "Authentication token is missing."}), 401
 
         access_token = auth_header.split(" ", 1)[1].strip()
 
-        if not access_token:
-            return jsonify({
-                "success": False,
-                "error": "Authentication token is empty."
-            }), 401
-
         history_data = get_history(access_token)
 
-        return jsonify({
-            "success": True,
-            "history": history_data
-        }), 200
+        return jsonify({"success": True, "history": history_data}), 200
 
     except Exception as e:
         print("HISTORY ERROR:", str(e))
-
-        return jsonify({
-            "success": False,
-            "error": "Unable to load caption history."
-        }), 500
+        return jsonify({"success": False, "error": "Unable to load caption history."}), 500
 
 
 
@@ -630,46 +613,23 @@ def history():
 # DELETE HISTORY
 # ============================================================
 
-@app.route(
-    "/history/<int:history_id>",
-    methods=["DELETE"]
-)
-def remove_history(
-    history_id
-):
-
+@app.route("/history/<int:history_id>", methods=["DELETE"])
+def remove_history(history_id):
     try:
+        auth_header = request.headers.get("Authorization", "")
 
-        delete_history(
-            history_id
-        )
+        if not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "error": "Authentication token is missing."}), 401
 
+        access_token = auth_header.split(" ", 1)[1].strip()
 
-        return jsonify({
+        delete_history(access_token, history_id)
 
-            "success": True,
-
-            "message":
-                "History deleted successfully"
-
-        })
-
+        return jsonify({"success": True, "message": "History deleted successfully"})
 
     except Exception as e:
-
-        print(
-            "DELETE HISTORY ERROR:",
-            str(e)
-        )
-
-
-        return jsonify({
-
-            "success": False,
-
-            "error": str(e)
-
-        }), 500
+        print("DELETE HISTORY ERROR:", str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ============================================================

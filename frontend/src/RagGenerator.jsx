@@ -21,7 +21,29 @@ export default function RagGenerator({ showToast }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Upload state
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+
   const update = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+
+  const handleUpload = async () => {
+    if (!uploadFile) { showToast?.("Please select a file.", "error"); return; }
+    setUploading(true); setUploadResult(null);
+    try {
+      const data = new FormData();
+      data.append("file", uploadFile);
+      const res = await axios.post("http://127.0.0.1:5000/rag/upload-document", data);
+      if (!res.data.success) throw new Error(res.data.error || "Upload failed.");
+      setUploadResult(res.data);
+      setUploadFile(null);
+      showToast?.(`✅ "${res.data.filename}" uploaded — ${res.data.chunk_count} chunks stored.`);
+    } catch (err) {
+      showToast?.(err.response?.data?.error || err.message || "Upload failed.", "error");
+    } finally {
+      setUploading(false); }
+  };
 
   const generate = async (e) => {
     e.preventDefault();
@@ -32,18 +54,12 @@ export default function RagGenerator({ showToast }) {
       setResult(res.data.result);
     } catch (err) {
       setError(err.response?.data?.error || err.message || "Unable to generate a RAG caption.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const copy = async (text, label = "Copied!") => {
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast?.(label);
-    } catch {
-      showToast?.("Copy failed.", "error");
-    }
+    try { await navigator.clipboard.writeText(text); showToast?.(label); }
+    catch { showToast?.("Copy failed.", "error"); }
   };
 
   return (
@@ -55,13 +71,51 @@ export default function RagGenerator({ showToast }) {
         </span>
         <h2 className="text-2xl font-extrabold">Knowledge-Based Caption Generator</h2>
         <p className="mt-2 text-purple-100 text-sm max-w-xl">
-          Generate personalized captions using relevant information retrieved from your uploaded knowledge base.
+          Upload your brand documents, then generate captions grounded in your own knowledge base.
         </p>
       </div>
 
+      {/* Step 1 — Upload document */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="w-8 h-8 rounded-full bg-purple-600 text-white text-sm font-bold flex items-center justify-center">1</span>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Upload Knowledge Document</h3>
+            <p className="text-sm text-gray-500">PDF, TXT, or MD — your brand info, product details, tone guide, etc.</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 items-start">
+          <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl p-6 cursor-pointer hover:border-purple-400 hover:bg-purple-50/40 transition">
+            <span className="text-3xl mb-2">📄</span>
+            <span className="text-sm text-gray-500 text-center">
+              {uploadFile ? uploadFile.name : "Click to select a PDF, TXT, or MD file"}
+            </span>
+            <input type="file" accept=".pdf,.txt,.md" onChange={e => setUploadFile(e.target.files[0] || null)} className="hidden" />
+          </label>
+
+          <button onClick={handleUpload} disabled={uploading || !uploadFile}
+            className="shrink-0 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold px-6 py-3 rounded-xl disabled:opacity-50 transition shadow-md shadow-purple-200">
+            {uploading ? "Uploading..." : "Upload & Process"}
+          </button>
+        </div>
+
+        {uploadResult && (
+          <div className="mt-4 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-sm text-emerald-800">
+            ✅ <span className="font-semibold">{uploadResult.filename}</span> processed —{" "}
+            {uploadResult.chunk_count} chunks stored ({uploadResult.character_count?.toLocaleString()} characters).
+          </div>
+        )}
+      </div>
+
+      {/* Step 2 — Generate */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Form */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="w-8 h-8 rounded-full bg-purple-600 text-white text-sm font-bold flex items-center justify-center">2</span>
+            <h3 className="text-lg font-bold text-gray-900">Generate RAG Caption</h3>
+          </div>
+
           <form onSubmit={generate} className="space-y-5">
             <div>
               <Label>Caption Topic *</Label>
@@ -126,6 +180,7 @@ export default function RagGenerator({ showToast }) {
             <div className="flex flex-col items-center justify-center h-64 text-center text-gray-400">
               <span className="text-5xl mb-4">🧠</span>
               <p className="text-sm">RAG-powered content will appear here.</p>
+              <p className="text-xs mt-2 text-gray-300">Upload a document first, then generate.</p>
             </div>
           )}
 
@@ -195,10 +250,15 @@ export default function RagGenerator({ showToast }) {
               </div>
 
               {/* RAG metadata */}
-              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
-                <p className="text-sm font-bold text-emerald-800 mb-2">🔍 RAG Retrieval Details</p>
-                <p className="text-xs text-gray-600 mb-3">Retrieved chunks: {result.rag_metadata?.retrieved_count ?? 0}</p>
-                {result.rag_metadata?.sources?.length > 0 ? (
+              <div className={`rounded-2xl p-4 ${result.rag_metadata?.retrieved_count > 0 ? "bg-emerald-50 border border-emerald-100" : "bg-amber-50 border border-amber-100"}`}>
+                <p className={`text-sm font-bold mb-2 ${result.rag_metadata?.retrieved_count > 0 ? "text-emerald-800" : "text-amber-800"}`}>
+                  🔍 RAG Retrieval Details
+                </p>
+                <p className="text-xs text-gray-600 mb-3">
+                  Retrieved chunks: <span className="font-semibold">{result.rag_metadata?.retrieved_count ?? 0}</span>
+                  {result.rag_metadata?.retrieved_count === 0 && " — upload a document to enable knowledge-grounded generation"}
+                </p>
+                {result.rag_metadata?.sources?.length > 0 && (
                   <div className="space-y-2">
                     {result.rag_metadata.sources.map((s, i) => (
                       <div key={i} className="bg-white rounded-xl p-3 text-xs">
@@ -207,8 +267,6 @@ export default function RagGenerator({ showToast }) {
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-xs text-gray-500">No relevant documents retrieved. Caption generated without knowledge base.</p>
                 )}
               </div>
             </div>
