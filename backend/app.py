@@ -2,7 +2,6 @@ import os
 from flask import Flask, jsonify, request
 from flask import request, jsonify
 from flask_cors import CORS
-from rag.routes import rag_bp
 from rag.retrieval_routes import retrieval_bp
 from rag.storage_routes import storage_bp
 from rag.generation_routes import generation_bp
@@ -25,11 +24,10 @@ from services.database import (
 # ============================================================
 
 app = Flask(__name__)
-app.register_blueprint(rag_bp)
+CORS(app)
 app.register_blueprint(storage_bp)
 app.register_blueprint(retrieval_bp)
 app.register_blueprint(generation_bp)
-CORS(app)
 
 
 # ============================================================

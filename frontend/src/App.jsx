@@ -131,7 +131,6 @@ export default function App() {
     if (!formData.topic.trim() && !image) { showToast("Enter a topic or upload an image.", "error"); return; }
     setLoading(true); setResult(null);
     try {
-      const headers = await getAuthHeader();
       let response;
       if (image) {
         const data = new FormData();
@@ -140,9 +139,9 @@ export default function App() {
         data.append("tone", formData.tone);
         data.append("audience", formData.audience);
         data.append("length", formData.length);
-        response = await axios.post("http://127.0.0.1:5000/generate-image-caption", data, { headers });
+        response = await axios.post("http://127.0.0.1:5000/generate-image-caption", data);
       } else {
-        response = await axios.post("http://127.0.0.1:5000/generate-caption", formData, { headers });
+        response = await axios.post("http://127.0.0.1:5000/generate-caption", formData);
       }
       if (response.data.success) setResult(response.data.result);
       else showToast(response.data.error, "error");
@@ -155,8 +154,7 @@ export default function App() {
     if (!originalCaption.trim()) { showToast("Enter a caption to rewrite.", "error"); return; }
     setRewriteLoading(true); setRewriteResult(null);
     try {
-      const headers = await getAuthHeader();
-      const response = await axios.post("http://127.0.0.1:5000/rewrite-caption", { caption: originalCaption, style: rewriteStyle, platform: rewritePlatform }, { headers });
+      const response = await axios.post("http://127.0.0.1:5000/rewrite-caption", { caption: originalCaption, style: rewriteStyle, platform: rewritePlatform });
       if (response.data.success) setRewriteResult(response.data.result);
       else showToast(response.data.error, "error");
     } catch (err) {
@@ -168,8 +166,7 @@ export default function App() {
     if (!analyzeCaptionText.trim()) { showToast("Enter a caption to analyze.", "error"); return; }
     setAnalysisLoading(true); setAnalysisResult(null);
     try {
-      const headers = await getAuthHeader();
-      const response = await axios.post("http://127.0.0.1:5000/analyze-caption", { caption: analyzeCaptionText, platform: analyzePlatform }, { headers });
+      const response = await axios.post("http://127.0.0.1:5000/analyze-caption", { caption: analyzeCaptionText, platform: analyzePlatform });
       if (response.data.success) setAnalysisResult(response.data.result);
       else showToast(response.data.error, "error");
     } catch (err) {

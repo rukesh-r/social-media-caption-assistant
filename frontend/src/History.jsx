@@ -7,18 +7,10 @@ export default function History({ showToast }) {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
 
-  const getAuthHeader = async () => {
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
-    if (!token) throw new Error("Not authenticated.");
-    return { Authorization: `Bearer ${token}` };
-  };
-
   const loadHistory = async () => {
     setLoading(true);
     try {
-      const headers = await getAuthHeader();
-      const res = await axios.get("http://127.0.0.1:5000/history", { headers });
+      const res = await axios.get("http://127.0.0.1:5000/history");
       if (res.data.success) setHistory(res.data.history);
     } catch {
       showToast?.("Unable to load history.", "error");
@@ -29,8 +21,7 @@ export default function History({ showToast }) {
 
   const deleteItem = async (id) => {
     try {
-      const headers = await getAuthHeader();
-      await axios.delete(`http://127.0.0.1:5000/history/${id}`, { headers });
+      await axios.delete(`http://127.0.0.1:5000/history/${id}`);
       setHistory(h => h.filter(i => i.id !== id));
       showToast?.("Deleted.");
     } catch {

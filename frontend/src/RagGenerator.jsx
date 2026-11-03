@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { supabase } from "./supabaseClient";
 
 const PLATFORMS = ["Instagram", "LinkedIn", "Facebook", "X", "YouTube"];
 const TONES = ["Friendly", "Professional", "Funny", "Inspirational", "Casual", "Persuasive"];
@@ -31,18 +30,10 @@ export default function RagGenerator({ showToast }) {
   const [documents, setDocuments] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
 
-  const getAuthHeader = async () => {
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
-    if (!token) throw new Error("Not authenticated.");
-    return { Authorization: `Bearer ${token}` };
-  };
-
   const loadDocuments = async () => {
     setDocsLoading(true);
     try {
-      const headers = await getAuthHeader();
-      const res = await axios.get("http://127.0.0.1:5000/rag/documents", { headers });
+      const res = await axios.get("http://127.0.0.1:5000/rag/documents");
       if (res.data.success) setDocuments(res.data.documents);
     } catch { /* silent */ } finally { setDocsLoading(false); }
   };
@@ -55,10 +46,9 @@ export default function RagGenerator({ showToast }) {
     if (!uploadFile) { showToast?.("Please select a file.", "error"); return; }
     setUploading(true); setUploadResult(null);
     try {
-      const headers = await getAuthHeader();
       const data = new FormData();
       data.append("file", uploadFile);
-      const res = await axios.post("http://127.0.0.1:5000/rag/upload-document", data, { headers });
+      const res = await axios.post("http://127.0.0.1:5000/rag/upload-document", data);
       if (!res.data.success) throw new Error(res.data.error || "Upload failed.");
       setUploadResult(res.data);
       setUploadFile(null);
@@ -71,8 +61,7 @@ export default function RagGenerator({ showToast }) {
 
   const handleDeleteDocument = async (name) => {
     try {
-      const headers = await getAuthHeader();
-      await axios.delete(`http://127.0.0.1:5000/rag/documents/${encodeURIComponent(name)}`, { headers });
+      await axios.delete(`http://127.0.0.1:5000/rag/documents/${encodeURIComponent(name)}`);
       setDocuments(d => d.filter(doc => doc.document_name !== name));
       showToast?.("Document deleted.");
     } catch (err) {
@@ -84,8 +73,7 @@ export default function RagGenerator({ showToast }) {
     e.preventDefault();
     setLoading(true); setError(""); setResult(null);
     try {
-      const headers = await getAuthHeader();
-      const res = await axios.post("http://127.0.0.1:5000/rag/generate-caption", form, { headers });
+      const res = await axios.post("http://127.0.0.1:5000/rag/generate-caption", form);
       if (!res.data.success) throw new Error(res.data.error || "Generation failed.");
       setResult(res.data.result);
     } catch (err) {
